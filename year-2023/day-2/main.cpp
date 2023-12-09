@@ -132,10 +132,12 @@ int main() {
 
     std::ifstream document(R"(D:\work\advent-of-code\year-2023\day-2\input.txt)");
     const auto games = read_games(document);
-    const auto matched_games = filter_games(games, BagConfiguration);
     const auto result = std::transform_reduce(
-        matched_games.cbegin(), matched_games.cend(), std::uint32_t{0}, std::plus{},
-        [](const Game& game) { return game.id; }
+        games.cbegin(), games.cend(), std::uint32_t{0}, std::plus{},
+        [](const Game& game) {
+            const auto maximized_set = game.maximized_set();
+            return maximized_set.red * maximized_set.green * maximized_set.blue;
+        }
     );
     std::cout << "The result value is " << result << std::endl;
 
