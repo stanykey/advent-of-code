@@ -38,26 +38,26 @@ AnalyzeTemporaryDtors: false
 FormatStyle: file
 
 CheckOptions:
-    readability-identifier-naming.NamespaceCase: lower_case
-    readability-identifier-naming.ClassCase: CamelCase
-    readability-identifier-naming.StructCase: CamelCase
-    readability-identifier-naming.EnumCase: CamelCase
-    readability-identifier-naming.FunctionCase: lower_case
-    readability-identifier-naming.TypedefCase: CamelCase
-    readability-identifier-naming.TypeAliasCase: CamelCase
-    readability-identifier-naming.TemplateParameterCase: CamelCase
-    readability-identifier-naming.ValueTemplateParameterCase: CamelCase
-    readability-identifier-naming.ParameterCase: lower_case
-    readability-identifier-naming.VariableCase: lower_case
-    readability-identifier-naming.StaticVariableCase: lower_case
-    readability-identifier-naming.PrivateMemberCase: lower_case
-    readability-identifier-naming.PrivateMemberPrefix: _
-    readability-identifier-naming.ProtectedMemberCase: lower_case
-    readability-identifier-naming.ProtectedMemberPrefix: _
-    readability-identifier-naming.ConstantMemberCase: lower_case
-    readability-identifier-naming.ConstantMemberPrefix: _
-    readability-identifier-naming.StaticConstantCase: CamelCase
-    readability-identifier-naming.GlobalConstantCase: UPPER_CASE
-    readability-identifier-naming.EnumConstantCase: UPPER_CASE
+    readability-identifier-naming.NamespaceCase: "lower_case"
+    readability-identifier-naming.ClassCase: "CamelCase"
+    readability-identifier-naming.StructCase: "CamelCase"
+    readability-identifier-naming.EnumCase: "CamelCase"
+    readability-identifier-naming.FunctionCase: "lower_case"
+    readability-identifier-naming.TypedefCase: "CamelCase"
+    readability-identifier-naming.TypeAliasCase: "CamelCase"
+    readability-identifier-naming.TemplateParameterCase: "CamelCase"
+    readability-identifier-naming.ValueTemplateParameterCase: "CamelCase"
+    readability-identifier-naming.ParameterCase: "lower_case"
+    readability-identifier-naming.VariableCase: "lower_case"
+    readability-identifier-naming.StaticVariableCase: "lower_case"
+    readability-identifier-naming.PrivateMemberCase: "lower_case"
+    readability-identifier-naming.PrivateMemberSuffix: "_"
+    readability-identifier-naming.ProtectedMemberCase: "lower_case"
+    readability-identifier-naming.ProtectedMemberSuffix: "_"
+    readability-identifier-naming.ConstantMemberCase: "lower_case"
+    readability-identifier-naming.ConstantMemberSuffix: "_"
+    readability-identifier-naming.StaticConstantCase: "CamelCase"
+    readability-identifier-naming.GlobalConstantCase: "UPPER_CASE"
+    readability-identifier-naming.EnumConstantCase: "UPPER_CASE"
 
 ...
