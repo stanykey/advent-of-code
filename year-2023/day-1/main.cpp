@@ -73,7 +73,7 @@ namespace parsing {
             }
 
             const auto candidates = get_partial_matches(*cursor);
-            const auto it         = std::find_if(candidates.cbegin(), candidates.cend(), [&](const std::string_view& word) {
+            const auto it = std::find_if(candidates.cbegin(), candidates.cend(), [&](const std::string_view& word) {
                 if (word.size() > std::distance(cursor, line.cend())) {
                     return false;
                 }
@@ -118,8 +118,8 @@ std::vector<std::uint16_t> get_calibrations(std::istream& in) {
     std::string line;
     while (std::getline(in, line)) {
         const auto first_digit = parsing::get_first_digit(line);
-        const auto last_digit  = parsing::get_last_digit(line);
-        const auto number      = first_digit * 10 + last_digit;  // NOLINT: concatenate two single digits into one number
+        const auto last_digit = parsing::get_last_digit(line);
+        const auto number = first_digit * 10 + last_digit;  // NOLINT: concatenate two single digits into one number
         calibrations.emplace_back(number);
 
         std::cout << line << " -> " << number << std::endl;
@@ -131,7 +131,7 @@ int main() {
     std::ifstream document(R"(input.txt)");
 
     const auto calibrations = get_calibrations(document);
-    const auto result       = std::accumulate(calibrations.begin(), calibrations.end(), std::uint32_t{0});
+    const auto result = std::accumulate(calibrations.begin(), calibrations.end(), std::uint32_t{0});
     std::cout << "The result value is " << result << std::endl;
 
     return 0;
