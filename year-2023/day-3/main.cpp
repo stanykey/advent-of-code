@@ -6,6 +6,7 @@
 #include <iostream>
 #include <iterator>
 #include <numeric>
+#include <optional>
 #include <set>
 #include <stdexcept>
 #include <string>
@@ -50,13 +51,16 @@ public:
         for (auto i = 0u; i != data_.size(); i++) {
             const std::string_view line = data_[i];
 
-            auto [number, pos] = get_number(line, 0);
-            while (!number.empty()) {
-                if (is_valid_number(number, i, pos)) {
-                    parts_numbers.emplace_back(as_int<std::uint32_t>(number));
+            auto star_pos = line.find('*');
+            while (star_pos < line.size()) {
+                const auto numbers = scan_for_numbers(i, star_pos);
+                if (numbers.size() == 2) {
+                    const auto first = as_int<std::uint32_t>(numbers.front());
+                    const auto second = as_int<std::uint32_t>(numbers.back());
+                    parts_numbers.emplace_back(first * second);
                 }
 
-                std::tie(number, pos) = get_number(line, pos + number.size() + 1);
+                star_pos = line.find('*', star_pos + 1);
             }
         }
 
@@ -107,6 +111,81 @@ private:
             return !NOT_SYMBOLS.contains(cell);
         });
     }
+
+    [[nodiscard]] std::vector<std::string_view> scan_for_numbers(std::size_t row, std::size_t star_pos) const {
+        std::vector<std::string_view> numbers;
+
+        const auto try_get_numbers = [this, &numbers, star_pos](std::string_view line) {
+            if (is_digit(line[star_pos])) {
+                if (const auto number = scan_for_number_in_both_direction(line, star_pos)) {
+                    numbers.emplace_back(*number);
+                }
+            } else {
+                if (const auto number = scan_for_number_in_left_direction(line, star_pos)) {
+                    numbers.emplace_back(*number);
+                }
+
+                if (const auto number = scan_for_number_in_right_direction(line, star_pos)) {
+                    numbers.emplace_back(*number);
+                }
+            }
+        };
+
+        try_get_numbers(data_[row]);
+
+        if (row > 0) {
+            try_get_numbers(data_[row - 1]);
+        }
+
+        if (row != (data_.size() - 1)) {
+            try_get_numbers(data_[row + 1]);
+        }
+
+        return numbers;
+    }
+
+    [[nodiscard]] static std::optional<std::string_view>
+    scan_for_number_in_left_direction(std::string_view line, std::size_t star_pos) {
+        if (star_pos == 0 || !is_digit(line[star_pos - 1])) {
+            return std::nullopt;
+        }
+
+        auto begin = star_pos - 1;
+        while (begin != 0 && is_digit(line[begin - 1])) {
+            begin--;
+        }
+
+        return line.substr(begin, star_pos - begin);
+    }
+
+    [[nodiscard]] static std::optional<std::string_view>
+    scan_for_number_in_right_direction(std::string_view line, std::size_t star_pos) {
+        if (star_pos == (line.size() - 1) || !is_digit(line[star_pos + 1])) {
+            return std::nullopt;
+        }
+
+        const auto begin = star_pos + 1;
+        const auto end = line.find_first_not_of(DIGITS, begin);
+        return line.substr(begin, end - begin);
+    }
+
+    [[nodiscard]] static std::optional<std::string_view>
+    scan_for_number_in_both_direction(std::string_view line, std::size_t star_pos) {
+        const auto begin = std::invoke([&line, star_pos]() -> std::size_t {
+            auto begin = star_pos;
+            while (begin != 0 && is_digit(line[begin - 1])) {
+                begin--;
+            }
+            return begin;
+        });
+        const auto end = line.find_first_not_of(DIGITS, star_pos);
+        return line.substr(begin, end - begin);
+    }
+
+    static inline bool is_digit(char symbol) {
+        return DIGITS.find(symbol) != std::string_view::npos;
+    }
+
 
 private:
     std::vector<std::string> data_;
