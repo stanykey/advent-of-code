@@ -10,6 +10,7 @@
 #include <sstream>
 #include <string>
 #include <tuple>
+#include <unordered_map>
 #include <vector>
 
 
@@ -67,18 +68,22 @@ public:
         return card;
     }
 
-    [[nodiscard]] std::uint32_t get_score() const {
+    std::uint32_t id() const {
+        return id_;
+    }
+
+    [[nodiscard]] std::tuple<std::uint32_t, const std::vector<std::uint32_t>&> get_score() const {
         if (score_) {
-            return score_.value();
+            return {score_.value(), matches_};
         }
 
-        std::vector<std::uint32_t> matches;
         std::set_intersection(
             winning_numbers_.cbegin(), winning_numbers_.cend(), draft_numbers_.cbegin(), draft_numbers_.cend(),
-            std::back_inserter(matches)
+            std::back_inserter(matches_)
         );
 
-        return score_.emplace(1 << (matches.size() - 1));
+        const auto value = matches_.empty() ? 0 : (1 << (matches_.size() - 1));
+        return {score_.emplace(value), matches_};
     }
 
 private:
@@ -86,6 +91,7 @@ private:
     std::vector<std::uint32_t> winning_numbers_;
     std::vector<std::uint32_t> draft_numbers_;
     mutable std::optional<std::uint32_t> score_;
+    mutable std::vector<std::uint32_t> matches_;
 };
 
 std::vector<Card> load_cards(std::istream& document) {
@@ -99,15 +105,41 @@ std::vector<Card> load_cards(std::istream& document) {
     return cards;
 }
 
+std::uint32_t play_game(const std::vector<Card>& cards) {
+    std::unordered_map<std::uint32_t, std::uint32_t> scores;
+    std::unordered_map<std::uint32_t, std::uint32_t> counter;
+
+    const auto copy_cards = [&](std::size_t id, std::size_t count) {
+        while (id != cards.size() && count != 0) {
+            counter[cards[id].id()]++;
+            count--;
+        }
+    };
+
+    for (const auto& card : cards) {
+        auto&& [score, matches] = card.get_score();
+
+        counter[card.id()]++;
+        scores[card.id()] = score;
+
+        copy_cards(card.id() + 1, matches.size());
+    }
+
+    return std::accumulate(
+        counter.cbegin(), counter.cend(), std::uint32_t{0},
+        [&](std::uint32_t value, const auto& entry) {
+            const auto [card_id, cards_count] = entry;
+            return value + scores[card_id] * counter[card_id];
+        }
+    );
+}
+
 
 int main() {
-    std::ifstream document(R"(D:\work\advent-of-code\year-2023\day-4\input.txt)");
+    std::ifstream document(R"(D:\work\advent-of-code\year-2023\day-4\test-data.txt)");
 
     const auto cards = load_cards(document);
-    const auto result =
-        std::transform_reduce(cards.cbegin(), cards.cend(), std::uint32_t{0}, std::plus{}, [](const Card& card) {
-            return card.get_score();
-        });
+    const auto result = play_game(cards);
     std::cout << "The result value is " << result << std::endl;
 
     return 0;
