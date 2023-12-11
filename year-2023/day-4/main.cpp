@@ -72,9 +72,9 @@ public:
         return id_;
     }
 
-    [[nodiscard]] std::tuple<std::uint32_t, const std::vector<std::uint32_t>&> get_score() const {
+    [[nodiscard]] std::uint32_t get_score() const {
         if (score_) {
-            return {score_.value(), matches_};
+            return score_.value();
         }
 
         std::set_intersection(
@@ -83,7 +83,14 @@ public:
         );
 
         const auto value = matches_.empty() ? 0 : (1 << (matches_.size() - 1));
-        return {score_.emplace(value), matches_};
+        return score_.emplace(value);
+    }
+
+    const std::vector<std::uint32_t>& get_matches() const {
+        if (!score_) {
+            std::ignore = get_score();
+        }
+        return matches_;
     }
 
 private:
@@ -106,37 +113,35 @@ std::vector<Card> load_cards(std::istream& document) {
 }
 
 std::uint32_t play_game(const std::vector<Card>& cards) {
-    std::unordered_map<std::uint32_t, std::uint32_t> scores;
     std::unordered_map<std::uint32_t, std::uint32_t> counter;
 
-    const auto copy_cards = [&](std::size_t id, std::size_t count) {
-        while (id != cards.size() && count != 0) {
-            counter[cards[id].id()]++;
+    const auto max_id = cards.size() + 1;
+    const auto copy_cards = [&](std::size_t id, std::size_t count, std::size_t multiplier) {
+
+        while (id != max_id && count != 0) {
+            counter[id] += multiplier;
+            id++;
             count--;
         }
     };
 
     for (const auto& card : cards) {
-        auto&& [score, matches] = card.get_score();
-
+        const auto& matches = card.get_matches();
         counter[card.id()]++;
-        scores[card.id()] = score;
-
-        copy_cards(card.id() + 1, matches.size());
+        copy_cards(card.id() + 1, matches.size(), counter[card.id()]);
     }
 
     return std::accumulate(
         counter.cbegin(), counter.cend(), std::uint32_t{0},
         [&](std::uint32_t value, const auto& entry) {
-            const auto [card_id, cards_count] = entry;
-            return value + scores[card_id] * counter[card_id];
+            return value + entry.second;
         }
     );
 }
 
 
 int main() {
-    std::ifstream document(R"(D:\work\advent-of-code\year-2023\day-4\test-data.txt)");
+    std::ifstream document(R"(input.txt)");
 
     const auto cards = load_cards(document);
     const auto result = play_game(cards);
