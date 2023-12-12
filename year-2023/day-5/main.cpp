@@ -36,6 +36,13 @@ namespace io {
     }
 }  // namespace io
 
+namespace std {
+    template<typename First, typename Second>
+    std::istream& operator>>(std::istream& in, std::pair<First, Second>& pair) {
+        return in >> pair.first >> pair.second;
+    }
+}  // namespace std
+
 struct SeedInfo {
     std::uint64_t id = 0;
     std::uint64_t soil = 0;
@@ -48,11 +55,7 @@ struct SeedInfo {
 };
 
 using FieldPtr = std::uint64_t SeedInfo::*;
-
-
-struct GardenPlan {
-    std::vector<SeedInfo> seeds;
-};
+using Interval = std::pair<std::uint64_t, std::uint64_t>;
 
 class Mapper {
 public:
@@ -91,7 +94,6 @@ public:
     }
 
 private:
-    using Interval = std::pair<std::uint64_t, std::uint64_t>;
     using Table = std::vector<std::tuple<Interval, std::uint64_t>>;
 
     Table table_;
@@ -100,16 +102,16 @@ private:
 };
 
 
-std::vector<SeedInfo> load_garden_plan(std::istream& plan_document) {
+std::uint64_t find_nearest_location(std::istream& plan_document) {
     auto line = io::read<std::string>(plan_document);
     if (!line.starts_with("seeds:")) {
         throw std::invalid_argument("invalid input steam");
     }
 
-    std::vector<SeedInfo> seeds;
-    std::transform(
-        std::istream_iterator<std::uint64_t>(plan_document), std::istream_iterator<std::uint64_t>(),
-        std::back_inserter(seeds), [](std::uint64_t id) { return SeedInfo{.id = id}; }
+    std::vector<Interval> seeds_rages;
+    std::copy(
+        std::istream_iterator<Interval>(plan_document), std::istream_iterator<Interval>(),
+        std::back_inserter(seeds_rages)
     );
 
     std::unordered_map<std::string, Mapper> mappers{
@@ -129,21 +131,39 @@ std::vector<SeedInfo> load_garden_plan(std::istream& plan_document) {
             const auto name = line.substr(0, line.size() - (MapSuffix.size() + 1));
             auto& mapper = mappers.at(name);
             mapper.load_table(plan_document);
-            mapper.lookup(seeds);
         }
     }
 
-    return seeds;
+    std::vector<std::uint64_t> min_locations;
+    std::transform(
+        seeds_rages.cbegin(), seeds_rages.cend(), std::back_inserter(min_locations),
+        [&mappers](const Interval& pair) {
+            std::vector<SeedInfo> seeds;
+            for (auto i = 0; i != pair.second; i++) {
+                seeds.push_back(SeedInfo{.id = pair.first + i});
+            }
+
+            mappers.at("seed-to-soil").lookup(seeds);
+            mappers.at("soil-to-fertilizer").lookup(seeds);
+            mappers.at("fertilizer-to-water").lookup(seeds);
+            mappers.at("water-to-light").lookup(seeds);
+            mappers.at("light-to-temperature").lookup(seeds);
+            mappers.at("temperature-to-humidity").lookup(seeds);
+            mappers.at("humidity-to-location").lookup(seeds);
+
+            return std::min_element(seeds.cbegin(), seeds.cend(), [](const SeedInfo& lhs, const SeedInfo& rhs) {
+                return lhs.location < rhs.location;
+            })->location;
+        }
+    );
+
+    return *std::min_element(min_locations.cbegin(), min_locations.cend());
 }
 
 int main() {
-    std::ifstream document(R"(input.txt)");
+    std::ifstream document(R"(D:\work\advent-of-code\year-2023\day-5\input.txt)");
 
-    const auto garden_plan = load_garden_plan(document);
-    const auto result =
-        std::min_element(garden_plan.cbegin(), garden_plan.cend(), [](const auto& lhs, const auto& rhs) {
-            return lhs.location < rhs.location;
-        })->location;
+    const auto result = find_nearest_location(document);
     std::cout << "The result value is " << result << std::endl;
 
     return 0;
