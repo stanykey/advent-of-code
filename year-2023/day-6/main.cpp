@@ -34,6 +34,12 @@ namespace io {
         return result;
     }
 
+    std::string read_line(std::istream& input) {
+        std::string line;
+        std::getline(input, line);
+        return line;
+    }
+
     template<typename T>
     std::vector<T> read_sequence(std::istream& input, bool has_prefix = false) {
         std::string line;
@@ -53,7 +59,7 @@ namespace io {
 }  // namespace io
 
 namespace core {
-    template <typename Integer>
+    template<typename Integer>
     class number_iterator {
     public:
         using iterator_category = std::random_access_iterator_tag;
@@ -142,7 +148,7 @@ namespace core {
         value_type current_;
     };
 
-    template <typename Integer>
+    template<typename Integer>
     number_iterator<Integer> make_number_iterator(Integer value) {
         return number_iterator<Integer>(value);
     }
@@ -168,6 +174,22 @@ std::vector<RaceRecord> load_races_records(std::istream& document) {
     return records;
 }
 
+RaceRecord load_race_record(std::istream& document) {
+    const auto duration_line = io::read_line(document);
+    const auto distances_line = io::read_line(document);
+
+    const auto to_number = [](std::string line, std::string_view prefix_to_ignore) {
+        line = line.substr(prefix_to_ignore.size());
+        line.erase(std::remove(line.begin(), line.end(), ' '), line.end());
+        line.erase(std::remove(line.begin(), line.end(), '\t'), line.end());
+        return static_cast<std::size_t>(std::stoull(line));
+    };
+
+    return RaceRecord{
+        .duration = to_number(duration_line, "Time:"), .distance = to_number(distances_line, "Distance:")
+    };
+}
+
 std::size_t simulate_race(std::size_t charge_duration, std::size_t total_duration) {
     const auto speed = charge_duration;
     const auto travel_time = total_duration - charge_duration;
@@ -177,9 +199,10 @@ std::size_t simulate_race(std::size_t charge_duration, std::size_t total_duratio
 std::pair<std::size_t, std::size_t> min_max_charge_time(const RaceRecord& record) {
     const auto start = core::make_number_iterator<std::size_t>(0);
     const auto end = start + record.duration;
-    const auto it = std::upper_bound(start, end, record.distance, [&record](std::size_t distance, std::size_t charge_time) {
-        return simulate_race(charge_time, record.duration) > distance;
-    });
+    const auto it =
+        std::upper_bound(start, end, record.distance, [&record](std::size_t distance, std::size_t charge_time) {
+            return simulate_race(charge_time, record.duration) > distance;
+        });
 
     return {*it, record.duration - *it};
 }
@@ -200,12 +223,9 @@ std::vector<std::pair<std::size_t, std::size_t>> determinate_winning_variants(co
 int main() {
     std::ifstream document(R"(D:\work\advent-of-code\year-2023\day-6\input.txt)");
 
-    const auto races_records = load_races_records(document);
-    const auto winning_variants = determinate_winning_variants(races_records);
-    const auto result = std::transform_reduce(
-        winning_variants.cbegin(), winning_variants.cend(), std::size_t{1}, std::multiplies{},
-        [](const auto& pair) { return pair.second - pair.first + 1; }
-    );
+    const auto race_record = load_race_record(document);
+    const auto winning_range = min_max_charge_time(race_record);
+    const auto result = winning_range.second - winning_range.first + 1;
     std::cout << "The result value is " << result << std::endl;
 
     return 0;
