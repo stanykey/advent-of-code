@@ -35,7 +35,7 @@ namespace io {
 }  // namespace io
 
 namespace game {
-    enum class Card { TWO, THREE, FOUR, FIVE, SIX, SEVEN, EIGHT, NINE, TEN, JACK, QUEEN, KING, ACE };
+    enum class Card { JOKER, TWO, THREE, FOUR, FIVE, SIX, SEVEN, EIGHT, NINE, TEN, QUEEN, KING, ACE };
 
     enum class Combination { ONE, PAIR, TWO_PAIR, THREE, FULL_HOUSE, FOUR, FIVE };
 
@@ -47,7 +47,7 @@ namespace game {
         std::transform(hand_str.cbegin(), hand_str.cend(), hand.begin(), [](char card) {
             static const std::unordered_map<char, Card> mapping{
                 {'2', Card::TWO},   {'3', Card::THREE}, {'4', Card::FOUR}, {'5', Card::FIVE}, {'6', Card::SIX},
-                {'7', Card::SEVEN}, {'8', Card::EIGHT}, {'9', Card::NINE}, {'T', Card::TEN},  {'J', Card::JACK},
+                {'7', Card::SEVEN}, {'8', Card::EIGHT}, {'9', Card::NINE}, {'T', Card::TEN},  {'J', Card::JOKER},
                 {'Q', Card::QUEEN}, {'K', Card::KING},  {'A', Card::ACE}
             };
             return mapping.at(card);
@@ -59,6 +59,20 @@ namespace game {
         std::unordered_map<Card, std::size_t> set(hand.size());
         for (auto&& card : hand) {
             set[card]++;
+        }
+
+        const auto it = set.find(Card::JOKER);
+        if (it != set.cend()) {
+            const auto jokers = it->second;
+            set.erase(it);
+            if (set.empty()) {
+                return Combination::FIVE;
+            }
+
+            auto max_it = std::max_element(set.begin(), set.end(), [](auto&& lhs, auto&& rhs) {
+                return lhs.second < rhs.second;
+            });
+            (*max_it).second +=jokers;
         }
 
         if (set.size() == 1) {
@@ -79,6 +93,12 @@ namespace game {
     }
 
     struct Player {
+        Player()
+            : hand_()
+            , bid_(0)
+        {
+        }
+
         const Hand& hand() const {
             return hand_;
         }
