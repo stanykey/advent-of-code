@@ -77,7 +77,7 @@ std::vector<std::uint16_t> load_route(std::istream& document) {
     std::transform(raw_route.cbegin(), raw_route.cend(), route.begin(), [](char direction) {
         return direction == 'L' ? 0 : 1;
     });
-    std::getline(document, raw_route); // consume new line
+    std::getline(document, raw_route);  // consume new line
 
     return route;
 }
@@ -100,12 +100,40 @@ std::size_t calc_distance(
     return distance;
 }
 
+std::size_t calc_distance_2(const Network& network, char from, char to, const std::vector<std::uint16_t>& route) {
+    std::size_t distance = 0;
+
+    std::vector<std::string> curents;
+    for (const auto& [name, _] : network.nodes) {
+        if (name.ends_with(from)) {
+            curents.push_back(name);
+        }
+    }
+
+    const auto is_done = [&curents, to]() {
+        return std::all_of(curents.cbegin(), curents.cend(), [to](const std::string& name) {
+            return name.ends_with(to);
+        });
+    };
+
+    std::size_t route_idx = 0;
+    while (!is_done()) {
+        for (auto& name : curents) {
+            const auto& node = network.nodes.at(name);
+            name = route[route_idx] == 0 ? node.left : node.right;
+        }
+        route_idx = (route_idx + 1) % route.size();
+        distance++;
+    }
+    return distance;
+}
+
 int main() {
     std::ifstream document(R"(D:\work\advent-of-code\year-2023\day-8\input.txt)");
 
     const auto route = load_route(document);
     const auto network = io::read<Network>(document);
-    const auto distance = calc_distance(network, "AAA", "ZZZ", route);
+    const auto distance = calc_distance_2(network, 'A', 'Z', route);
     std::cout << "The result is " << distance << std::endl;
     return 0;
 }
