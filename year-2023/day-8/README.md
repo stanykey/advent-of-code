@@ -15,9 +15,9 @@ After examining the maps for a bit, two nodes stick out: AAA and ZZZ. You feel l
 you are now, and you have to follow the left/right instructions until you reach ZZZ.
 
 This format defines each node of the network individually. For example:
-
-RL
 ```
+RL
+
 AAA = (BBB, CCC)
 BBB = (DDD, EEE)
 CCC = (ZZZ, GGG)
@@ -34,9 +34,9 @@ instructions, you reach ZZZ in 2 steps.
 Of course, you might not find ZZZ right away. If you run out of left/right instructions,
 repeat the whole sequence of instructions as necessary: RL really means RLRLRLRLRLRLRLRL...
 and so on. For example, here is a situation that takes 6 steps to reach ZZZ:
-
-LLR
 ```
+LLR
+
 AAA = (BBB, BBB)
 BBB = (AAA, ZZZ)
 ZZZ = (ZZZ, ZZZ)
