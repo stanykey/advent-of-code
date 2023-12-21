@@ -36,13 +36,13 @@ namespace io {
     }
 }  // namespace io
 
-struct Node {
+struct NodeInfo {
     std::string name;
-    std::string left;
-    std::string right;
+    std::string left_name;
+    std::string right_name;
 };
 
-Node parse_node_data(const std::string& data) {
+NodeInfo parse_node_data(const std::string& data) {
     static const std::regex pattern(R"((\w+)\s*=\s*\((\w+),\s*(\w+)\))");
 
     std::smatch matches;
@@ -50,21 +50,47 @@ Node parse_node_data(const std::string& data) {
         throw std::invalid_argument("Invalid input steam");
     }
 
-    return {.name = matches[1], .left = matches[2], .right = matches[3]};
+    return {.name = matches[1], .left_name = matches[2], .right_name = matches[3]};
 }
 
 class Network {
 public:
+    struct Node {
+        std::string name;
+        Node* left = nullptr;
+        Node* right = nullptr;
+    };
+
+    const std::vector<std::unique_ptr<Node>>& nodes() const {
+        return nodes_;
+    }
+
+    const std::unordered_map<std::string, Node*>& map() const {
+        return tree_;
+    }
+
+public:
     friend std::istream& operator>>(std::istream& in, Network& network) {
         std::string data;
+        std::vector<NodeInfo> nodes_info;
         while (std::getline(in, data) && !data.empty()) {
-            auto node = parse_node_data(data);
-            network.nodes[node.name] = std::move(node);
+            nodes_info.emplace_back(parse_node_data(data));
+            network.nodes_.emplace_back(new Node{.name = nodes_info.back().name});
+            network.tree_[nodes_info.back().name] = network.nodes_.back().get();
         }
+
+        for (const auto& info : nodes_info) {
+            auto* node = network.tree_[info.name];
+            node->left = network.tree_[info.left_name];
+            node->right = network.tree_[info.right_name];
+        }
+
         return in;
     }
 
-    std::unordered_map<std::string, Node> nodes;
+private:
+    std::vector<std::unique_ptr<Node>> nodes_;
+    std::unordered_map<std::string, Node*> tree_;
 };
 
 std::vector<std::uint16_t> load_route(std::istream& document) {
@@ -90,9 +116,9 @@ std::size_t calc_distance(
     auto current = from;
     std::size_t route_idx = 0;
     while (current != to) {
-        const auto& node = network.nodes.at(current);
+        const auto* node = network.map().at(current);
 
-        current = route[route_idx] == 0 ? node.left : node.right;
+        current = route[route_idx] == 0 ? node->left->name : node->right->name;
         route_idx = (route_idx + 1) % route.size();
 
         distance++;
@@ -100,27 +126,26 @@ std::size_t calc_distance(
     return distance;
 }
 
-std::size_t calc_distance_2(const Network& network, char from, char to, const std::vector<std::uint16_t>& route) {
-    std::size_t distance = 0;
+using NodePredicate = std::function<bool(const Network::Node& node)>;
 
-    std::vector<std::string> curents;
-    for (const auto& [name, _] : network.nodes) {
-        if (name.ends_with(from)) {
-            curents.push_back(name);
+std::size_t
+calc_distance(const Network& network, const NodePredicate& from, const NodePredicate& to, const std::vector<std::uint16_t>& route) {
+    std::vector<const Network::Node*> currents;
+    for (const auto& node : network.nodes()) {
+        if (from(*node)) {
+            currents.push_back(node.get());
         }
     }
 
-    const auto is_done = [&curents, to]() {
-        return std::all_of(curents.cbegin(), curents.cend(), [to](const std::string& name) {
-            return name.ends_with(to);
-        });
+    const auto is_done = [&currents, to]() {
+        return std::all_of(currents.cbegin(), currents.cend(), [to](const Network::Node* node) { return to(*node); });
     };
 
+    std::size_t distance = 0;
     std::size_t route_idx = 0;
     while (!is_done()) {
-        for (auto& name : curents) {
-            const auto& node = network.nodes.at(name);
-            name = route[route_idx] == 0 ? node.left : node.right;
+        for (auto& node : currents) {
+            node = route[route_idx] == 0 ? node->left : node->right;
         }
         route_idx = (route_idx + 1) % route.size();
         distance++;
@@ -133,7 +158,10 @@ int main() {
 
     const auto route = load_route(document);
     const auto network = io::read<Network>(document);
-    const auto distance = calc_distance_2(network, 'A', 'Z', route);
+    const auto distance = calc_distance(
+        network, [](const Network::Node& node) -> bool { return node.name.ends_with('A'); },
+        [](const Network::Node& node) -> bool { return node.name.ends_with('Z'); }, route
+    );
     std::cout << "The result is " << distance << std::endl;
     return 0;
 }
